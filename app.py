@@ -9,7 +9,7 @@ from datetime import datetime
 st.title("Customer Segmentation with K-Means Clustering")
 
 # Upload file
-uploaded_file = st.file_uploader("Upload CSV file for KMeans analysis", type="csv")
+uploaded_file = st.file_uploader("Upload CSV file", type="csv")
 
 if uploaded_file is not None:
     data = pd.read_csv(uploaded_file)
@@ -19,7 +19,7 @@ if uploaded_file is not None:
 
     # Feature selection
     features = ['Annual Income (k$)', 'Spending Score (1-100)']
-    
+
     # Standardize for better clustering
     scaler = StandardScaler()
     x_scaled = scaler.fit_transform(data[features])
@@ -42,27 +42,28 @@ if uploaded_file is not None:
     # Choose number of clusters
     k = st.slider("Choose number of clusters (k)", 1, 10, 5)
 
-    # Fit model
+    # Fit model and adjust cluster labels to start from 1
     kmeans = KMeans(n_clusters=k, init='k-means++', random_state=42)
-    data['Cluster'] = kmeans.fit_predict(x_scaled)
+    data['Cluster'] = kmeans.fit_predict(x_scaled) + 1  # +1 to start cluster numbers from 1
 
     # Show updated DataFrame
-    st.subheader("Updated Dataset with Cluster Column")
-    st.write(data.head())
+    st.subheader("Full Dataset with Clusters")
+    st.dataframe(data)
 
     # Cluster plot
     st.subheader("Cluster Visualization")
     fig2, ax2 = plt.subplots()
     colors = ['red', 'blue', 'green', 'cyan', 'magenta', 'orange', 'purple', 'brown', 'pink', 'gray']
 
-    for i in range(k):
+    for i in range(1, k + 1):
         ax2.scatter(
             x_scaled[data['Cluster'] == i, 0],
             x_scaled[data['Cluster'] == i, 1],
             s=100,
-            c=colors[i],
-            label=f'Cluster {i+1}'
+            c=colors[i - 1],
+            label=f'Cluster {i}'
         )
+
     ax2.scatter(kmeans.cluster_centers_[:, 0], kmeans.cluster_centers_[:, 1],
                 s=300, c='yellow', edgecolor='black', label='Centroids')
     ax2.set_title("Customer Clusters")
@@ -80,12 +81,12 @@ if uploaded_file is not None:
     if st.button("Predict Cluster"):
         new_point = pd.DataFrame([[income_input, score_input]], columns=features)
         new_point_scaled = scaler.transform(new_point)
-        prediction = kmeans.predict(new_point_scaled)[0]
+        prediction = kmeans.predict(new_point_scaled)[0] + 1  # +1 for 1-based indexing
 
         st.success(f"The customer belongs to **Cluster {prediction}**")
 
         # Log to file
-        log = f"{datetime.now()} | Income: {income_input} | Score: {score_input} | Predicted Cluster: {prediction }\n"
+        log = f"{datetime.now()} | Income: {income_input} | Score: {score_input} | Predicted Cluster: {prediction}\n"
         with open("logs.csv", "a") as log_file:
             log_file.write(log)
 
